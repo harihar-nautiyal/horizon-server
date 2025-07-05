@@ -5,11 +5,14 @@ edition = "2024"
 
 [dependencies]
 actix-web = "4.11.0"
+bb8-redis = "0.24.0"
 bson = "2.15.0"
 chrono = { version = "0.4.41", features = ["serde", "std"] }
 dotenv = "0.15.0"
 dotenv_codegen = "0.15.0"
+jsonwebtoken = "9.3.1"
 mongodb = "3.2.4"
 redis = { version = "0.32.3", features = ["tokio-native-tls-comp"] }
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.46.0", features = ["full"] }
+futures-util = "0.3.31"

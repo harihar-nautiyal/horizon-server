@@ -1,6 +1,7 @@
 mod models;
 mod admin;
 mod client;
+mod middleware;
 
 use dotenv::dotenv;
 use mongodb::Client;
@@ -9,6 +10,7 @@ use crate::admin::AdminRoutes;
 use actix_web::{web, App, HttpServer, get, Responder};
 use std::env;
 use std::io;
+use bb8_redis::{bb8, RedisConnectionManager};
 use redis;
 use crate::client::ClientRoutes;
 
@@ -29,19 +31,27 @@ async fn main() -> io::Result<()> {
     let mongodb_uri = env::var("MONGODB_URI").expect("MONGODB_URI must be set");
     let redis_uri = env::var("REDIS_URI").expect("REDIS_URI must be set");
     let database_name = env::var("DATABASE_NAME").expect("DATABASE_NAME must be set");
+    let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let server_token = env::var("SERVER_KEY").expect("SERVER_KEY must be set");
 
     let mongo_client = Client::with_uri_str(&mongodb_uri).await.unwrap();
-    let redis_client = redis::Client::open(redis_uri).unwrap();
     let db = mongo_client.database(&database_name);
-
+    let redis_manager = RedisConnectionManager::new(redis_uri).unwrap();
+    let redis_pool = bb8::Pool::builder()
+        .max_size(15) // Adjust based on your needs
+        .build(redis_manager)
+        .await
+        .unwrap();
     let state = web::Data::new(AppState {
-        redis: redis_client,
+        redis: redis_pool,
         clients: db.collection("clients"),
         files: db.collection("files"),
+        jwt_secret
     });
 
     HttpServer::new(move || {
         App::new()
+            .wrap(middleware::SayHi)
             .app_data(state.clone())
             .service(health)
             .service(web::scope("/admin").configure(AdminRoutes::routes))

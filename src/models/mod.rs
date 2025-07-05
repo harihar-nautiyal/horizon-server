@@ -3,3 +3,4 @@ pub mod client;
 pub mod file;
 mod upload;
 mod session;
+pub mod jwt;

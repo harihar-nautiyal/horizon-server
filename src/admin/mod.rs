@@ -1,6 +1,6 @@
 mod client;
 mod sessions;
-mod commands;
+mod command;
 
 use actix_web::{web};
 
@@ -12,6 +12,10 @@ impl AdminRoutes {
             .service(client::fetch)
             .service(client::fetch_all)
             .service(sessions::fetch)
-            .service(sessions::fetch_all);
+            .service(sessions::fetch_all)
+            .service(command::fetch)
+            .service(command::fetch_all)
+            .service(command::update)
+            .service(command::create);
     }
 }

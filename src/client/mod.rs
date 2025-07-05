@@ -1,6 +1,7 @@
 mod ping;
 mod upload;
 mod result;
+mod register;
 
 use actix_web::web;
 
