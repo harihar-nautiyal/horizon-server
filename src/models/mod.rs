@@ -2,5 +2,7 @@ pub mod app_state;
 pub mod client;
 pub mod file;
 mod upload;
-mod session;
+pub mod session;
 pub mod jwt;
+pub mod admin;
+pub mod commands;

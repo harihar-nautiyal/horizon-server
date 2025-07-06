@@ -1,17 +1,13 @@
 use std::future::{ready, Ready};
-
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error,
 };
 use futures_util::future::LocalBoxFuture;
 
-pub struct SayHi;
+pub struct Guardian;
 
-// Middleware factory is `Transform` trait
-// `S` - type of the next service
-// `B` - type of response's body
-impl<S, B> Transform<S, ServiceRequest> for SayHi
+impl<S, B> Transform<S, ServiceRequest> for Guardian
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
@@ -19,20 +15,20 @@ where
 {
     type Response = ServiceResponse<B>;
     type Error = Error;
+    type Transform = Middleware<S>;
     type InitError = ();
-    type Transform = SayHiMiddleware<S>;
     type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
-        ready(Ok(SayHiMiddleware { service }))
+        ready(Ok(Middleware { service }))
     }
 }
 
-pub struct SayHiMiddleware<S> {
+pub struct Middleware<S> {
     service: S,
 }
 
-impl<S, B> Service<ServiceRequest> for SayHiMiddleware<S>
+impl<S, B> Service<ServiceRequest> for Middleware<S>
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
@@ -45,14 +41,51 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        println!("Hi from start. You requested: {}", req.path());
+        // Check if the request path starts with "/admin/"
+        let is_admin_route = req.path().starts_with("/admin/");
+
+        if is_admin_route {
+            // Handle admin routes: check for X-Admin-Key
+            let admin_key = match std::env::var("ADMIN_KEY") {
+                Ok(key) => key,
+                Err(_) => {
+                    return Box::pin(async move {
+                        Err(actix_web::error::ErrorUnauthorized("ADMIN_KEY environment variable not set"))
+                    });
+                }
+            };
+
+            let header_key = req.headers().get("X-Admin-Key").and_then(|value| value.to_str().ok());
+
+            if header_key != Some(admin_key.as_str()) {
+                return Box::pin(async move {
+                    Err(actix_web::error::ErrorUnauthorized("Invalid or missing X-Admin-Key header"))
+                });
+            }
+        } else {
+            // Handle non-admin routes: check for X-Server-Key
+            let server_key = match std::env::var("SERVER_KEY") {
+                Ok(key) => key,
+                Err(_) => {
+                    return Box::pin(async move {
+                        Err(actix_web::error::ErrorUnauthorized("SERVER_KEY environment variable not set"))
+                    });
+                }
+            };
+
+            let header_key = req.headers().get("X-Server-Key").and_then(|value| value.to_str().ok());
+
+            if header_key != Some(server_key.as_str()) {
+                return Box::pin(async move {
+                    Err(actix_web::error::ErrorUnauthorized("Invalid or missing X-Server-Key header"))
+                });
+            }
+        }
 
         let fut = self.service.call(req);
 
         Box::pin(async move {
             let res = fut.await?;
-
-            println!("Hi from response");
             Ok(res)
         })
     }

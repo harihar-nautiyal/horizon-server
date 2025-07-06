@@ -1,8 +1,15 @@
 mod client;
 mod sessions;
 mod command;
+mod register;
+mod ping;
+mod middleware;
+mod ws;
 
-use actix_web::{web};
+use actix_web::{web, HttpRequest, HttpResponse, Error, rt};
+use actix_ws::AggregatedMessage;
+use futures_util::StreamExt as _;
+use crate::models::commands::AdminCommand;
 
 pub struct AdminRoutes {}
 
@@ -16,6 +23,7 @@ impl AdminRoutes {
             .service(command::fetch)
             .service(command::fetch_all)
             .service(command::update)
-            .service(command::create);
+            .service(command::create)
+            .service(register::register);
     }
 }

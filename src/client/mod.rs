@@ -10,8 +10,9 @@ pub struct ClientRoutes {}
 impl ClientRoutes {
     pub fn routes(cfg: &mut web::ServiceConfig) {
         cfg
-            .service(ping::fetch)
+            .service(ping::pong)
             .service(upload::fetch)
-            .service(result::fetch);
+            .service(result::fetch)
+            .service(register::register);
     }
 }

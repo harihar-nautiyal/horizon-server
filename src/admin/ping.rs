@@ -27,28 +27,28 @@ pub async fn pong(state: web::Data<AppState>, data: web::Json<PingRequest>) -> i
         Err(e) => return HttpResponse::Unauthorized().json(doc! { "error": format!("Invalid token: {}", e) }),
     };
 
-    let client_id = &token_data.claims.id;
+    let admin_id = &token_data.claims.id;
 
-    println!("Client ID from token: {}", client_id);
-    
-    let object_id = match ObjectId::parse_str(&client_id) {
+    println!("Admin ID from token: {}", admin_id);
+
+    let object_id = match ObjectId::parse_str(&admin_id) {
         Ok(oid) => oid,
         Err(e) => {
-            println!("Failed to parse ObjectId '{}': {}", client_id, e);
+            println!("Failed to parse ObjectId '{}': {}", admin_id, e);
             return HttpResponse::BadRequest().json(doc! {"error": "Invalid client ID format"});
         }
     };
 
     println!("Parsed ObjectId: {}", object_id);
 
-    let client = match state.clients.find_one(doc! { "_id": object_id }).await {
-        Ok(Some(client)) => {
-            println!("Found client: {:?}", client);
-            client
+    match state.admins.find_one(doc! { "_id": object_id }).await {
+        Ok(Some(admin)) => {
+            println!("Found client: {:?}", admin);
+            admin
         },
         Ok(None) => {
-            println!("Client not found with ObjectId: {}", object_id);
-            return HttpResponse::NotFound().json(doc! {"error": "Client not found"});
+            println!("Admin not found with ObjectId: {}", object_id);
+            return HttpResponse::NotFound().json(doc! {"error": "Admin not found"});
         },
         Err(e) => {
             println!("Database error: {}", e);
@@ -61,9 +61,9 @@ pub async fn pong(state: web::Data<AppState>, data: web::Json<PingRequest>) -> i
         Err(e) => return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to get Redis connection: {}", e)}),
     };
 
-    let status_key = format!("client:{}:status", client_id);
-    let sessions_key = format!("client:{}:sessions", client_id);
-    let last_ping_key = format!("client:{}:lastPing", client_id);
+    let status_key = format!("admin:{}:status", admin_id);
+    let sessions_key = format!("admin:{}:sessions", admin_id);
+    let last_ping_key = format!("admin:admin_id{}:lastPing", admin_id);
 
     let now = chrono::Utc::now();
     let now_ms = now.timestamp_millis();
@@ -81,7 +81,7 @@ pub async fn pong(state: web::Data<AppState>, data: web::Json<PingRequest>) -> i
         if let Err(e) = redis_conn.rpush::<_, _, usize>(&sessions_key, serde_json::to_string(&session).unwrap()).await {
             return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to store session: {}", e)});
         }
-        println!("Client {} started new session at {}", client_id, now_iso);
+        println!("Admin {} started new session at {}", admin_id, now_iso);
     }
 
     let last_session: Option<String> = match redis_conn.lindex::<_, Option<String>>(&sessions_key, -1).await {
@@ -96,7 +96,7 @@ pub async fn pong(state: web::Data<AppState>, data: web::Json<PingRequest>) -> i
             if let Err(e) = redis_conn.lset::<_, _, ()>(&sessions_key, -1, serde_json::to_string(&session).unwrap()).await {
                 return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to update session: {}", e)});
             }
-            println!("Client {} session ended at {}", client_id, now_iso);
+            println!("Admin {} session ended at {}", admin_id, now_iso);
         }
     }
 

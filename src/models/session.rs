@@ -1,5 +1,11 @@
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize)]
 pub struct Session {
-    created_at: u32,
-    updated_at: u32,
-    agent: String
+    pub start: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end: Option<String>,
+    pub start_ms: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_ms: Option<i64>,
 }
