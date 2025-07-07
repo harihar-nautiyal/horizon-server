@@ -1,6 +1,6 @@
 # Horizon Server
 
-Horizon Server is a command and control (C2) server for a Rust-based remote administration tool (RAT). It's designed to listen for connections from clients, manage sessions, and issue commands.
+Horizon Server is a command and control (C2) server for a Rust-based remote access trojan (RAT). It's designed to listen for connections from clients, manage sessions, and issue commands.
 
 ## Status
 
