@@ -1,57 +1,33 @@
-use actix_web::{get, Responder, web, HttpResponse};
-use bson::{doc, oid::ObjectId};
-use redis::{AsyncCommands};
-use serde::{Deserialize, Serialize};
+use actix_web::{get, Responder, web, HttpResponse, HttpRequest, HttpMessage};
+use bson::{doc};
 use crate::models::app_state::AppState;
-use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
 use crate::models::jwt::Claims;
 use crate::models::session::Session;
+use crate::models::client::Client;
 
-const PING_INTERVAL: i64 = 10;
-const STATUS_TTL: i64 = 15;
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-struct PingRequest {
-    token: String
-}
 
 #[get("/ping")]
-pub async fn pong(state: web::Data<AppState>, data: web::Json<PingRequest>) -> impl Responder {
-
-    let token_data = match decode::<Claims>(
-        &data.token,
-        &DecodingKey::from_secret(state.jwt_secret.as_bytes()),
-        &Validation::new(Algorithm::HS256),
-    ) {
-        Ok(token) => token,
-        Err(e) => return HttpResponse::Unauthorized().json(doc! { "error": format!("Invalid token: {}", e) }),
-    };
-
-    let client_id = &token_data.claims.id;
-
-    println!("Client ID from token: {}", client_id);
-    
-    let object_id = match ObjectId::parse_str(&client_id) {
-        Ok(oid) => oid,
-        Err(e) => {
-            println!("Failed to parse ObjectId '{}': {}", client_id, e);
-            return HttpResponse::BadRequest().json(doc! {"error": "Invalid client ID format"});
+pub async fn pong(state: web::Data<AppState>, req: HttpRequest) -> impl Responder {
+    let extensions = req.extensions();
+    let claims = match extensions.get::<Claims>() {
+        Some(claims) => claims,
+        None => {
+            return HttpResponse::Unauthorized().json(doc! {
+                "error": "Missing or invalid token (claims not found)"
+            });
         }
     };
 
-    println!("Parsed ObjectId: {}", object_id);
-
-    let client = match state.clients.find_one(doc! { "_id": object_id }).await {
+    let client_id = &claims.id;
+    let client = match Client::get(client_id, &state.clients).await {
         Ok(Some(client)) => {
-            println!("Found client: {:?}", client);
             client
         },
         Ok(None) => {
-            println!("Client not found with ObjectId: {}", object_id);
             return HttpResponse::NotFound().json(doc! {"error": "Client not found"});
         },
         Err(e) => {
-            println!("Database error: {}", e);
             return HttpResponse::InternalServerError().json(doc! {"error": format!("Database error: {}", e)});
         }
     };
@@ -61,51 +37,10 @@ pub async fn pong(state: web::Data<AppState>, data: web::Json<PingRequest>) -> i
         Err(e) => return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to get Redis connection: {}", e)}),
     };
 
-    let status_key = format!("client:{}:status", client_id);
-    let sessions_key = format!("client:{}:sessions", client_id);
-    let last_ping_key = format!("client:{}:lastPing", client_id);
-
-    let now = chrono::Utc::now();
-    let now_ms = now.timestamp_millis();
-    let now_iso = now.to_rfc3339();
-
-    let is_active: Option<String> = redis_conn.get(&status_key).await.unwrap_or(None);
-
-    if is_active.is_none() {
-        let session = Session {
-            start: now_iso.clone(),
-            end: None,
-            start_ms: now_ms,
-            end_ms: None,
-        };
-        if let Err(e) = redis_conn.rpush::<_, _, usize>(&sessions_key, serde_json::to_string(&session).unwrap()).await {
-            return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to store session: {}", e)});
-        }
-        println!("Client {} started new session at {}", client_id, now_iso);
+    match Session::update_activity(&mut redis_conn, client_id).await {
+        Ok(_) => (),
+        Err(e) => return HttpResponse::InternalServerError().json(e),
     }
 
-    let last_session: Option<String> = match redis_conn.lindex::<_, Option<String>>(&sessions_key, -1).await {
-        Ok(value) => value,
-        Err(_) => None,
-    };
-    if let Some(session_str) = last_session {
-        let mut session: Session = serde_json::from_str(&session_str).unwrap();
-        if session.end.is_none() && is_active.is_none() {
-            session.end = Some(now_iso.clone());
-            session.end_ms = Some(now_ms);
-            if let Err(e) = redis_conn.lset::<_, _, ()>(&sessions_key, -1, serde_json::to_string(&session).unwrap()).await {
-                return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to update session: {}", e)});
-            }
-            println!("Client {} session ended at {}", client_id, now_iso);
-        }
-    }
-
-    if let Err(e) = redis_conn.set_ex::<_, _, ()>(status_key, "active", STATUS_TTL as u64).await {
-        return HttpResponse::InternalServerError().json(doc! {"error": format!("Redis set failed: {}", e)});
-    }
-    if let Err(e) = redis_conn.set_ex::<_, _, ()>(last_ping_key, now_iso, STATUS_TTL as u64).await {
-        return HttpResponse::InternalServerError().json(doc! {"error": format!("Redis set failed: {}", e)});
-    }
-
-    HttpResponse::Ok().json(doc! {"status": "pong"})
+    HttpResponse::Ok().json(client)
 }

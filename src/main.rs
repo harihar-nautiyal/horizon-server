@@ -62,3 +62,18 @@ async fn main() -> io::Result<()> {
         .run()
         .await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::{test, App};
+
+    #[actix_web::test]
+    async fn test_health_ok() {
+        let app = App::new().service(health);
+        let mut app = test::init_service(app).await;
+        let req = test::TestRequest::get().uri("/health").to_request();
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+    }
+}

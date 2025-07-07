@@ -1,11 +1,8 @@
-use actix_web::{web, HttpResponse};
 use bson::doc;
 use serde::{Deserialize, Serialize};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation, errors::Error as JwtError};
 use bson::oid::ObjectId;
-use crate::models::admin::Admin;
-use crate::models::app_state::AppState;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -17,7 +14,7 @@ pub enum Access {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub id: String,
+    pub id: ObjectId,
     pub guid: String,
     pub access: Access,
     pub exp: i64,
@@ -26,7 +23,7 @@ pub struct Claims {
 
 
 impl Claims {
-    pub fn new(id: String, guid: String, access: Access ,duration: Duration) -> Self {
+    pub fn new(id: ObjectId, guid: String, access: Access ,duration: Duration) -> Self {
         let iat = Utc::now().timestamp();
         let exp = (Utc::now() + duration).timestamp();
         Claims { id, guid, access, exp, iat }
@@ -34,7 +31,7 @@ impl Claims {
 
     pub fn generate_jwt(id: ObjectId, guid: String, access: Access, secret: &str, duration: Duration) -> Result<String, JwtError> {
         let claims = Claims::new(
-            id.to_hex(),
+            id,
             guid.clone(),
             access,
             duration,

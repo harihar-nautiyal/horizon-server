@@ -32,8 +32,12 @@ impl Client {
         }
     }
 
-    pub async fn get(guid: &String, collection: &Collection<Client>) -> mongodb::error::Result<Option<Self>> {
-        collection.find_one(doc! { "_id": guid }).await
+    pub async fn get(id: &ObjectId, collection: &Collection<Client>) -> mongodb::error::Result<Option<Self>> {
+        collection.find_one(doc! {"_id": id}).await
+    } 
+
+    pub async fn get_from_guid(guid: &String, collection: &Collection<Client>) -> mongodb::error::Result<Option<Self>> {
+        collection.find_one(doc! { "guid": guid }).await
     }
 
     pub async fn insert(self, collection: &Collection<Client>) -> mongodb::error::Result<Self> {

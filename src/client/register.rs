@@ -12,7 +12,7 @@ struct RegisterRequest {
 
 #[post("/register")]
 pub async fn register(state: web::Data<AppState>, data: web::Json<RegisterRequest>) -> impl Responder {
-    match Client::get(&data.guid, &state.clients).await {
+    match Client::get_from_guid(&data.guid, &state.clients).await {
         Ok(Some(client)) => {
             client.jwt_request(state).await
         }

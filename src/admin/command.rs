@@ -1,4 +1,4 @@
-use actix_web::{get, Responder, post, put, web, HttpResponse};
+use actix_web::{get, Responder, post, put, web, HttpResponse, HttpRequest, HttpMessage};
 use bson::doc;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
@@ -9,24 +9,10 @@ struct CommandRequest {
     token: String
 }
 #[get("/command")]
-async fn fetch_all(state: web::Data<AppState>, data: web::Json<CommandRequest>) -> impl Responder {
-
-    let token_data = match decode::<Claims>(
-        &data.token,
-        &DecodingKey::from_secret(state.jwt_secret.as_bytes()),
-        &Validation::new(Algorithm::HS256),
-    ) {
-        Ok(token) => token,
-        Err(e) => return HttpResponse::Unauthorized().json(doc! { "error": format!("Invalid token: {}", e) }),
-    };
+async fn fetch_all(state: web::Data<AppState>, data: web::Json<CommandRequest>, req: HttpRequest) -> impl Responder {
+    let claims = req.extensions().get::<Claims>();
     
-    let mut redis_conn = match state.redis.get().await {
-        Ok(conn) => conn,
-        Err(e) => return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to get Redis connection: {}", e)}),
-    };
 
-    let command = format!("client:{}:status", client_id);
-    
     "All commands here".to_string()
 }
 

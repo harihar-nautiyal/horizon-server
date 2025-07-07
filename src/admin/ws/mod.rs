@@ -8,6 +8,8 @@ use futures_util::StreamExt;
 use serde_json::json;
 use crate::models::commands::AdminCommand;
 use crate::models::app_state::AppState;
+use crate::models::command_result::CommandResult;
+
 pub struct WebsocketsHandler {}
 
 impl WebsocketsHandler {
@@ -27,8 +29,8 @@ impl WebsocketsHandler {
                         match serde_json::from_str::<AdminCommand>(&text) {
                             Ok(command) => {
                                 let response = match command.action.as_str() {
-                                    "ban" => ban::BanCommand::handle(&command.payload).await,
-                                    "status" => status::StatusCommand::handle(&command.payload).await,
+                                    // "ban" => ban::BanCommand::handle(&command.payload).await,
+                                    // "status" => status::StatusCommand::handle(&command.payload).await,
                                     _ => CommandResult::Error {
                                         message: "Unknown action".to_string(),
                                     },

@@ -1,9 +1,12 @@
 use std::future::{ready, Ready};
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    Error,
+    Error, HttpMessage,
 };
 use futures_util::future::LocalBoxFuture;
+use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
+use crate::models::jwt::{Claims, Access};
+use bson::oid::ObjectId;
 
 pub struct Guardian;
 
@@ -41,52 +44,68 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        // Check if the request path starts with "/admin/"
-        let is_admin_route = req.path().starts_with("/admin/");
+        let path = req.path().to_string();
+        let is_admin_route = path.starts_with("/admin");
+        let is_register_route = path == "/register";
 
-        if is_admin_route {
-            // Handle admin routes: check for X-Admin-Key
-            let admin_key = match std::env::var("ADMIN_KEY") {
-                Ok(key) => key,
-                Err(_) => {
-                    return Box::pin(async move {
-                        Err(actix_web::error::ErrorUnauthorized("ADMIN_KEY environment variable not set"))
-                    });
-                }
-            };
-
-            let header_key = req.headers().get("X-Admin-Key").and_then(|value| value.to_str().ok());
-
-            if header_key != Some(admin_key.as_str()) {
-                return Box::pin(async move {
-                    Err(actix_web::error::ErrorUnauthorized("Invalid or missing X-Admin-Key header"))
-                });
-            }
-        } else {
-            // Handle non-admin routes: check for X-Server-Key
-            let server_key = match std::env::var("SERVER_KEY") {
-                Ok(key) => key,
-                Err(_) => {
-                    return Box::pin(async move {
-                        Err(actix_web::error::ErrorUnauthorized("SERVER_KEY environment variable not set"))
-                    });
-                }
-            };
-
-            let header_key = req.headers().get("X-Server-Key").and_then(|value| value.to_str().ok());
-
-            if header_key != Some(server_key.as_str()) {
-                return Box::pin(async move {
-                    Err(actix_web::error::ErrorUnauthorized("Invalid or missing X-Server-Key header"))
-                });
-            }
+        if is_register_route {
+            let fut = self.service.call(req);
+            return Box::pin(async move {
+                let res = fut.await?;
+                Ok(res)
+            });
         }
 
-        let fut = self.service.call(req);
+        let jwt_secret = match std::env::var("JWT_SECRET") {
+            Ok(secret) => secret,
+            Err(_) => {
+                return Box::pin(async {
+                    Err(actix_web::error::ErrorInternalServerError("JWT_SECRET not set"))
+                });
+            }
+        };
 
-        Box::pin(async move {
-            let res = fut.await?;
-            Ok(res)
-        })
+        let auth_header = req.headers().get("Authorization").and_then(|h| h.to_str().ok());
+
+        let token = match auth_header {
+            Some(header) if header.starts_with("Bearer ") => Some(header.trim_start_matches("Bearer ").trim()),
+            _ => None,
+        };
+
+        if token.is_none() {
+            return Box::pin(async {
+                Err(actix_web::error::ErrorUnauthorized("Missing or invalid Authorization header"))
+            });
+        }
+
+        let decoded = decode::<Claims>(
+            token.unwrap(),
+            &DecodingKey::from_secret(jwt_secret.as_bytes()),
+            &Validation::new(Algorithm::HS256),
+        );
+
+        match decoded {
+            Ok(data) => {
+                let claims = data.claims;
+
+                if is_admin_route && claims.access != Access::Admin {
+                    return Box::pin(async {
+                        Err(actix_web::error::ErrorForbidden("Admin access required"))
+                    });
+                }
+
+                // 🔥 Attach claims to request extensions
+                req.extensions_mut().insert(claims);
+
+                let fut = self.service.call(req);
+                Box::pin(async move {
+                    let res = fut.await?;
+                    Ok(res)
+                })
+            }
+            Err(e) => Box::pin(async move {
+                Err(actix_web::error::ErrorUnauthorized(format!("Invalid token: {}", e)))
+            }),
+        }
     }
 }

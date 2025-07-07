@@ -19,9 +19,9 @@ pub struct Admin {
 }
 
 impl Admin {
-    pub fn new(guid: String) -> Self {
+    pub fn new(guid: String, agent: String) -> Self {
         let now = DateTime::now();
-        Self {
+        Admin {
             id: ObjectId::new(),
             guid,
             registered_at: now.clone(),
@@ -30,11 +30,15 @@ impl Admin {
         }
     }
 
-    pub async fn get(guid: &String, collection: &Collection<Self>) -> mongodb::error::Result<Option<Self>> {
-        collection.find_one(doc! { "_id": guid }).await
+    pub async fn get(id: &ObjectId, collection: &Collection<Admin>) -> mongodb::error::Result<Option<Self>> {
+        collection.find_one(doc! {"_id": id}).await
     }
 
-    pub async fn insert(self, collection: &Collection<Self>) -> mongodb::error::Result<Self> {
+    pub async fn get_from_guid(guid: &String, collection: &Collection<Admin>) -> mongodb::error::Result<Option<Self>> {
+        collection.find_one(doc! { "guid": guid }).await
+    }
+
+    pub async fn insert(self, collection: &Collection<Admin>) -> mongodb::error::Result<Self> {
         collection.insert_one(&self).await?;
         Ok(self)
     }

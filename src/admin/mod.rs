@@ -3,13 +3,9 @@ mod sessions;
 mod command;
 mod register;
 mod ping;
-mod middleware;
 mod ws;
 
-use actix_web::{web, HttpRequest, HttpResponse, Error, rt};
-use actix_ws::AggregatedMessage;
-use futures_util::StreamExt as _;
-use crate::models::commands::AdminCommand;
+use actix_web::{web};
 
 pub struct AdminRoutes {}
 
