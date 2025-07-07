@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use chrono::{Duration, Utc};
+use crate::models::client::Client;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]

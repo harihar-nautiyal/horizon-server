@@ -6,3 +6,4 @@ pub mod session;
 pub mod jwt;
 pub mod admin;
 pub mod commands;
+pub mod command_result;

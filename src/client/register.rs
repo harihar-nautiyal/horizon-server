@@ -1,6 +1,6 @@
 use actix_web::{post, Responder, web, HttpResponse};
 use serde::{Deserialize};
-use bson::{doc, DateTime, oid::ObjectId};
+use bson::{doc};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use crate::models::app_state::AppState;
@@ -33,28 +33,22 @@ pub async fn register(state: web::Data<AppState>, data: web::Json<RegisterReques
         Err(e) => return HttpResponse::InternalServerError().json(doc! { "error": format!("Database error: {}", e) }),
     }
 
-    let new_client = Client {
-        id: ObjectId::new(),
-        guid: data.guid.clone(),
-        agent: data.agent.clone(),
-        registered_at: DateTime::from_millis(Utc::now().timestamp_millis()),
-        updated_at: DateTime::from_millis(Utc::now().timestamp_millis()),
-        last_online: DateTime::from_millis(Utc::now().timestamp_millis()),
+    let new_client = match Client::new(data.guid.clone(), data.agent.clone())
+        .insert(&state.clients)
+        .await
+    {
+        Ok(client) => client,
+        Err(e) => {
+            return HttpResponse::InternalServerError().json(doc! {
+            "error": format!("Database error: {}", e)
+        });
+        }
     };
 
-    match state.clients.insert_one(&new_client).await {
-        Ok(_) => {
-            let claims = Claims::new(new_client.id.to_hex(), data.agent.clone(), Access::Client,Duration::hours(1));
-            let token = match encode(
-                &Header::default(),
-                &claims,
-                &EncodingKey::from_secret(state.jwt_secret.as_bytes()),
-            ) {
-                Ok(token) => token,
-                Err(e) => return HttpResponse::InternalServerError().json(doc! { "error": format!("Failed to generate token: {}", e) }),
-            };
-            HttpResponse::Ok().json(doc! { "token": token })
-        }
-        Err(e) => HttpResponse::InternalServerError().json(doc! { "error": format!("Database error: {}", e) }),
+    match new_client.generate_jwt(&state.jwt_secret, Duration::hours(1)) {
+        Ok(token) => HttpResponse::Ok().json(doc! { "token": token }),
+        Err(e) => HttpResponse::InternalServerError().json(doc! {
+            "error": format!("Failed to generate token: {}", e)
+        }),
     }
 }

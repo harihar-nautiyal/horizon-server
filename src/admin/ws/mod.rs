@@ -1,17 +1,24 @@
+mod uploads;
+mod clients;
+mod commands;
+
 use actix_web::{rt, web, Error, HttpRequest, HttpResponse};
 use actix_ws::AggregatedMessage;
 use futures_util::StreamExt;
+use serde_json::json;
 use crate::models::commands::AdminCommand;
-
+use crate::models::app_state::AppState;
 pub struct WebsocketsHandler {}
 
 impl WebsocketsHandler {
-    async fn handler(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, Error> {
+    async fn handler(req: HttpRequest, stream: web::Payload, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
         let (res, mut session, stream) = actix_ws::handle(&req, stream)?;
 
         let mut stream = stream
             .aggregate_continuations()
             .max_continuation_size(2_usize.pow(20));
+
+        let state = state.clone();
 
         rt::spawn(async move {
             while let Some(msg) = stream.next().await {

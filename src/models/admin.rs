@@ -10,3 +10,16 @@ pub struct Admin {
     pub updated_at: DateTime,
     pub last_online: DateTime
 }
+
+impl Admin {
+    pub fn new(guid: String) -> Admin {
+        let now = bson::DateTime::now();
+        Admin {
+            id: ObjectId::new(),
+            guid,
+            registered_at: now.clone(),
+            updated_at: now.clone(),
+            last_online: now.clone()
+        }
+    }
+}
