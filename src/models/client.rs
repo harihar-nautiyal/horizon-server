@@ -1,11 +1,12 @@
+use actix_web::{web, HttpResponse};
 use serde::{Serialize, Deserialize};
-use bson::{DateTime, JavaScriptCodeWithScope};
+use bson::{DateTime};
 use bson::oid::ObjectId;
 use mongodb::Collection;
-use crate::models::jwt::{Claims, Access};
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation, errors::Error as JwtError};
-use chrono::Duration;
 use bson::doc;
+use chrono::Duration;
+use crate::models::app_state::AppState;
+use crate::models::jwt::{Access, Claims};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Client {
@@ -31,8 +32,8 @@ impl Client {
         }
     }
 
-    pub async fn get(&self, collection: &Collection<Client>) -> mongodb::error::Result<Option<Self>> {
-        collection.find_one(doc! { "_id": &self.id }).await
+    pub async fn get(guid: &String, collection: &Collection<Client>) -> mongodb::error::Result<Option<Self>> {
+        collection.find_one(doc! { "_id": guid }).await
     }
 
     pub async fn insert(self, collection: &Collection<Client>) -> mongodb::error::Result<Self> {
@@ -40,22 +41,12 @@ impl Client {
         Ok(self)
     }
 
-    pub fn generate_jwt(&self, secret: &str, duration: Duration) -> Result<String, JwtError> {
-        let claims = Claims::new(
-            self.id.to_hex(),
-            self.guid.clone(),
-            Access::Client,
-            duration,
-        );
-        encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_bytes()))
-    }
-
-    pub fn decode_jwt(token: &str, secret: &str) -> Result<Claims, JwtError> {
-        let decoded = decode::<Claims>(
-            token,
-            &DecodingKey::from_secret(secret.as_bytes()),
-            &Validation::new(Algorithm::HS256),
-        )?;
-        Ok(decoded.claims)
+    pub async fn jwt_request(self, state: web::Data<AppState>) -> HttpResponse {
+        match Claims::generate_jwt(self.id, self.guid, Access::Client, &state.jwt_secret, Duration::hours(1)) {
+            Ok(token) => HttpResponse::Ok().json(doc! { "token": token }),
+            Err(e) => HttpResponse::InternalServerError().json(doc! {
+                        "error": format!("JWT generation failed: {}", e)
+        }),
+        }
     }
 }
