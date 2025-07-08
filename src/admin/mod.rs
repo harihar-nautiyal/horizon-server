@@ -3,7 +3,6 @@ mod sessions;
 mod command;
 mod register;
 mod ping;
-mod ws;
 mod upload;
 
 use actix_web::{web};
