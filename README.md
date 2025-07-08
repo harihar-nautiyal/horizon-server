@@ -52,9 +52,9 @@ REDIS_URI=redis://localhost:6379
 DATABASE_NAME=horizon
 SERVER_IP=127.0.0.1
 SERVER_PORT=5487
-JWT_SECRET=hKsrT3AOp98615gm88sL6viCvfegRwr63CiAZVripaw2MctS
-SERVER_KEY=jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf9y
-ADMIN_KEY=jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf78
+JWT_SECRET=<Generate random jwt secret>
+SERVER_KEY=<Generate random server key>
+ADMIN_KEY=<Generate random admin key>
 ```
 
 ### Running the Server
