@@ -4,7 +4,7 @@ mod command;
 mod register;
 mod ping;
 mod ws;
-mod uploads;
+mod upload;
 
 use actix_web::{web};
 
@@ -20,6 +20,10 @@ impl AdminRoutes {
             .service(command::fetch_all)
             .service(command::update)
             .service(command::create)
+            .service(upload::fetch)
+            .service(upload::fetch_all)
+            .service(upload::update)
+            .service(upload::create)
             .service(register::register)
             .service(ping::pong);
     }
