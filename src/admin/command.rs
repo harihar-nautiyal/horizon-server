@@ -41,6 +41,26 @@ async fn fetch_all(state: web::Data<AppState>, path: web::Path<String>) -> impl 
     }
 }
 
+#[get("/command/{client_id}/pending")]
+async fn fetch_pending(state: web::Data<AppState>, path: web::Path<String>) -> impl Responder {
+    let client_id_str = path.into_inner();
+
+    let client_id = match ObjectId::parse_str(&client_id_str) {
+        Ok(oid) => oid,
+        Err(_) => return HttpResponse::BadRequest().body("Invalid client_id"),
+    };
+
+    let mut redis_conn = match state.redis.get().await {
+        Ok(conn) => conn,
+        Err(e) => return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to get Redis connection: {}", e)}),
+    };
+
+    match Command::get_pending(&mut redis_conn, client_id).await {
+        Ok(commands) => HttpResponse::Ok().json(commands),
+        Err(err) => HttpResponse::InternalServerError().body(format!("Error: {}", err)),
+    }
+}
+
 
 #[get("/command/{client_id}/{command_id}")]
 async fn fetch(

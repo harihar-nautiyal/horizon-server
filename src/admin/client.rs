@@ -1,4 +1,4 @@
-use actix_web::{Responder, get, HttpResponse};
+use actix_web::{Responder, get};
 
 #[get("/client")]
 pub async fn fetch_all() -> impl Responder {

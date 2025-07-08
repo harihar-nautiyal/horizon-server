@@ -6,7 +6,6 @@ use actix_web::{
 use futures_util::future::LocalBoxFuture;
 use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
 use crate::models::jwt::{Claims, Access};
-use bson::oid::ObjectId;
 
 pub struct Guardian;
 

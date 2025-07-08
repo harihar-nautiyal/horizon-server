@@ -41,7 +41,6 @@ async fn main() -> io::Result<()> {
     let state = web::Data::new(AppState {
         redis: redis_pool,
         clients: db.collection("clients"),
-        files: db.collection("files"),
         admins: db.collection("admins"),
         jwt_secret
     });

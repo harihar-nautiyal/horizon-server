@@ -3,13 +3,6 @@ use bson::{oid::ObjectId, DateTime};
 use bb8_redis::{bb8::PooledConnection, RedisConnectionManager};
 use redis::AsyncCommands;
 
-#[derive(Deserialize)]
-pub struct AdminCommand {
-    pub action: String,
-    #[serde(flatten)]
-    pub payload: serde_json::Value,
-}
-
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Command {
     id: ObjectId,

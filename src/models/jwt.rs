@@ -2,7 +2,7 @@ use std::fmt;
 use bson::doc;
 use serde::{Deserialize, Serialize};
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation, errors::Error as JwtError};
+use jsonwebtoken::{encode, EncodingKey, Header, errors::Error as JwtError};
 use bson::oid::ObjectId;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -47,13 +47,14 @@ impl Claims {
         );
         encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_bytes()))
     }
-
-    pub fn decode_jwt(token: &str, secret: &str) -> Result<Claims, JwtError> {
-        let decoded = decode::<Claims>(
-            token,
-            &DecodingKey::from_secret(secret.as_bytes()),
-            &Validation::new(Algorithm::HS256),
-        )?;
-        Ok(decoded.claims)
-    }
+    
+    // For future use maybe
+    // pub fn decode_jwt(token: &str, secret: &str) -> Result<Claims, JwtError> {
+    //     let decoded = decode::<Claims>(
+    //         token,
+    //         &DecodingKey::from_secret(secret.as_bytes()),
+    //         &Validation::new(Algorithm::HS256),
+    //     )?;
+    //     Ok(decoded.claims)
+    // }
 }
