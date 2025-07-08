@@ -33,6 +33,30 @@ Horizon Server is a command and control (C2) server for a Rust-based remote acce
     cd horizon-server
     ```
 
+### Configuration
+
+Before running the server, you need to set up the following dependencies and environment variables:
+
+**Dependencies:**
+
+*   **MongoDB:** A NoSQL database used for storing data.
+*   **Redis:** An in-memory data structure store, used as a message broker and for caching.
+
+**Environment Variables:**
+
+Create a `.env` file in the root of the project or set the following environment variables:
+
+```
+MONGODB_URI=mongodb://localhost:27017
+REDIS_URI=redis://localhost:6379
+DATABASE_NAME=horizon
+SERVER_IP=127.0.0.1
+SERVER_PORT=5487
+JWT_SECRET=hKsrT3AOp98615gm88sL6viCvfegRwr63CiAZVripaw2MctS
+SERVER_KEY=jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf9y
+ADMIN_KEY=jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf78
+```
+
 ### Running the Server
 
 To start the server, run the following command:
