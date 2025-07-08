@@ -1,0 +1,13 @@
+### Send result of a command
+POST http://localhost:5487/client/commands/result/686d20346de60ad8c112e48c
+X-Server-Key: jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf9y
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6eyIkb2lkIjoiNjg2ZDBhNTUwZmFhMjA5OGI5NThiZWFlIn0sImd1aWQiOiJ0ZXN0dXNlcjEyMyIsImFjY2VzcyI6ImNsaWVudCIsImV4cCI6MTc1MzM2NDAyNSwiaWF0IjoxNzUxOTgxNjI1fQ.FtXH2dCHfeyTUOhwMWh-BRnkr-RmdgLrIGj6ELN5zVQ
+Accept: application/json
+Content-Type: application/json
+
+{
+  "result": "its good bro"
+}
+###
+
+

@@ -1,0 +1,7 @@
+### Get status
+GET http://localhost:5487/admin/status/686d0a550faa2098b958beae
+X-Server-Key: jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf9y
+X-Admin-Key: jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf78
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6eyIkb2lkIjoiNjg2ZDFhYjkwMmRhODczY2M1ZTk4NzM2In0sImd1aWQiOiJ0ZXN0YWRtaW4xMjMiLCJhY2Nlc3MiOiJhZG1pbiIsImV4cCI6MTc1MzM2NDI1NCwiaWF0IjoxNzUxOTgxODU0fQ.e3Xd4m5_OjQm74LpYRXqyr417IWVaaCUEWJOB5dQcYw
+Accept: application/json
+###

@@ -1,7 +1,7 @@
 pub mod app_state;
 pub mod client;
 pub mod file;
-mod upload;
+pub mod upload;
 pub mod session;
 pub mod jwt;
 pub mod admin;

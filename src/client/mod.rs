@@ -1,6 +1,7 @@
 mod ping;
-mod result;
 mod register;
+mod commands;
+mod upload;
 
 use actix_web::web;
 
@@ -10,7 +11,7 @@ impl ClientRoutes {
     pub fn routes(cfg: &mut web::ServiceConfig) {
         cfg
             .service(ping::pong)
-            .service(result::fetch)
+            .service(commands::result)
             .service(register::register);
     }
 }

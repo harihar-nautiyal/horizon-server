@@ -3,17 +3,17 @@ use bson::doc;
 use serde::{Deserialize, Serialize};
 use bson::oid::ObjectId;
 use crate::models::app_state::AppState;
-use crate::models::upload::{Upload, Status};
+use crate::models::commands::{Command, CommandStatus};
 use crate::models::jwt::Claims;
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct ResultUploadRequest {
+pub struct ResultCommandRequest {
     result: String
 }
-#[post("/upload/result/{id}")]
+#[post("/commands/result/{id}")]
 pub async fn result(
     state: web::Data<AppState>,
-    data: web::Json<ResultUploadRequest>,
+    data: web::Json<ResultCommandRequest>,
     path: web::Path<String>,
     req: HttpRequest,
 ) -> impl Responder {
@@ -28,11 +28,11 @@ pub async fn result(
     };
 
     let client_id = claims.id;
-    let upload_id_str = path.into_inner();
+    let command_id_str = path.into_inner();
 
-    let upload_id = match ObjectId::parse_str(&upload_id_str) {
+    let command_id = match ObjectId::parse_str(&command_id_str) {
         Ok(oid) => oid,
-        Err(_) => return HttpResponse::BadRequest().json(doc! { "error": "Invalid upload ID" }),
+        Err(_) => return HttpResponse::BadRequest().json(doc! { "error": "Invalid command ID" }),
     };
 
     let mut redis_conn = match state.redis.get().await {
@@ -44,33 +44,33 @@ pub async fn result(
         }
     };
 
-    let mut upload = match Upload::get(&mut redis_conn, client_id, upload_id).await {
+    let mut command = match Command::get(&mut redis_conn, client_id, command_id).await {
         Ok(Some(cmd)) => cmd,
         Ok(None) => {
             return HttpResponse::NotFound().json(doc! {
-                "error": "Upload not found"
+                "error": "Command not found"
             });
         }
         Err(e) => {
             return HttpResponse::InternalServerError().json(doc! {
-                "error": format!("Failed to fetch upload: {}", e)
+                "error": format!("Failed to fetch command: {}", e)
             });
         }
     };
 
-    let download_file = data.result.clone();
+    let result = data.result.clone();
 
-    if let Err(e) = upload
-        .update(&mut redis_conn, download_file, Status::Uploaded)
+    if let Err(e) = command
+        .update(&mut redis_conn, result, CommandStatus::Completed)
         .await
     {
         return HttpResponse::InternalServerError().json(doc! {
-            "error": format!("Failed to update upload: {}", e)
+            "error": format!("Failed to update command: {}", e)
         });
     }
 
     HttpResponse::Ok().json(doc! {
         "success": true,
-        "message": "Uploaded successfully"
+        "message": "Command marked as completed"
     })
 }

@@ -4,6 +4,7 @@ mod command;
 mod register;
 mod ping;
 mod ws;
+mod uploads;
 
 use actix_web::{web};
 
@@ -14,8 +15,7 @@ impl AdminRoutes {
         cfg
             .service(client::fetch)
             .service(client::fetch_all)
-            .service(sessions::fetch)
-            .service(sessions::fetch_all)
+            .service(sessions::fetch_status)
             .service(command::fetch)
             .service(command::fetch_all)
             .service(command::update)

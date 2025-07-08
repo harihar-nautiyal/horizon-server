@@ -5,6 +5,8 @@ use bb8_redis::{bb8::PooledConnection, RedisConnectionManager};
 use bson::doc;
 use bson::oid::ObjectId;
 use crate::models::jwt::Access;
+use crate::models::client::Client;
+use crate::models::admin::Admin;
 
 const STATUS_TTL: i64 = 15;
 
@@ -16,6 +18,19 @@ pub struct Session {
     pub start_ms: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub end_ms: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Status {
+    Online,
+    Offline
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Record {
+    Admin(Admin),
+    Client(Client)
 }
 
 impl Session {
@@ -81,5 +96,15 @@ impl Session {
             .map_err(|e| format!("Redis SET_EX last ping error: {}", e))?;
 
         Ok(())
+    }
+
+    pub async fn status(redis:  &mut PooledConnection<'_, RedisConnectionManager>, id: ObjectId, access: Access) -> Result<Status, String> {
+        let status_key = format!("{}:{}:status", access.to_string(), id);
+
+        match redis.get::<_, Option<String>>(status_key).await {
+            Ok(Some(status_str)) if status_str == "active" => Ok(Status::Online),
+            Ok(_) => Ok(Status::Offline),
+            Err(e) => Err(format!("Redis GET status error: {}", e)),
+        }
     }
 }
