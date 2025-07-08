@@ -1,47 +1,33 @@
 use actix_web::{get, Responder, post, put, web, HttpResponse, HttpRequest, HttpMessage};
 use bson::doc;
-use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use crate::models::app_state::AppState;
 use crate::models::jwt::Claims;
 use bson::oid::ObjectId;
-use crate::models::client::Client;
-use crate::models::admin::Admin;
-use crate::models::commands::Command;
-#[derive(Deserialize, Serialize, Debug, Clone)]
-struct FetchAllCommandRequest {
-    client: ObjectId
-}
 
+use crate::models::commands::{Command, CommandStatus};
 #[derive(Deserialize, Serialize, Debug)]
 struct PostCommandRequest {
     client: ObjectId,
     query: String
 }
 
-#[get("/command")]
-async fn fetch_all(state: web::Data<AppState>, data: web::Json<FetchAllCommandRequest>, req: HttpRequest) -> impl Responder {
-    let extensions = req.extensions();
-    let claims = match extensions.get::<Claims>() {
-        Some(claims) => claims,
-        None => {
-            return HttpResponse::Unauthorized().json(doc! {
-                "error": "Missing or invalid token (claims not found)"
-            });
-        }
-    };
+#[derive(Debug, Deserialize)]
+pub struct UpdateCommandRequest {
+    pub client_id: ObjectId,
+    pub command_id: ObjectId,
+    pub status: CommandStatus,
+    pub result: String,
+}
 
-    let admin_id = &claims.id;
-    let client = match Client::get(&data.client, &state.clients).await {
-        Ok(Some(client)) => {
-            client
-        },
-        Ok(None) => {
-            return HttpResponse::NotFound().json(doc! {"error": "admin not found"});
-        },
-        Err(e) => {
-            return HttpResponse::InternalServerError().json(doc! {"error": format!("Database error: {}", e)});
-        }
+
+#[get("/command/{client_id}")]
+async fn fetch_all(state: web::Data<AppState>, path: web::Path<String>) -> impl Responder {
+    let client_id_str = path.into_inner();
+
+    let client_id = match ObjectId::parse_str(&client_id_str) {
+        Ok(oid) => oid,
+        Err(_) => return HttpResponse::BadRequest().body("Invalid client_id"),
     };
 
     let mut redis_conn = match state.redis.get().await {
@@ -49,8 +35,9 @@ async fn fetch_all(state: web::Data<AppState>, data: web::Json<FetchAllCommandRe
         Err(e) => return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to get Redis connection: {}", e)}),
     };
 
-    match Command::get_all(&mut redis_conn, data.client).await {
-        Ok(commands: Vec<Command>)
+    match Command::get_all(&mut redis_conn, client_id).await {
+        Ok(commands) => HttpResponse::Ok().json(commands),
+        Err(err) => HttpResponse::InternalServerError().body(format!("Error: {}", err)),
     }
 }
 
@@ -111,11 +98,39 @@ async fn create(state: web::Data<AppState>, data: web::Json<PostCommandRequest>,
 
     match command.register(&mut redis_conn).await {
         Ok(_) => HttpResponse::Ok().json(command),
-        Err(e) => return HttpResponse::InternalServerError().json(doc! {"error": format!("Database error: {}", e)}),
+        Err(e) => HttpResponse::InternalServerError().json(doc! {"error": format!("Database error: {}", e)}),
     }
 }
 
 #[put("/command")]
-async fn update() -> impl Responder {
-    "Update command here".to_string()
+async fn update(
+    state: web::Data<AppState>,
+    data: web::Json<UpdateCommandRequest>,
+) -> impl Responder {
+    let UpdateCommandRequest {
+        client_id,
+        command_id,
+        status,
+        result,
+    } = data.into_inner();
+
+    let mut redis_conn = match state.redis.get().await {
+        Ok(conn) => conn,
+        Err(e) => {
+            return HttpResponse::InternalServerError().json(doc! {
+                "error": format!("Failed to get Redis connection: {}", e)
+            })
+        }
+    };
+
+    let mut command = match Command::get(&mut redis_conn, client_id.clone(), command_id.clone()).await {
+        Ok(Some(cmd)) => cmd,
+        Ok(None) => return HttpResponse::NotFound().body("Command not found"),
+        Err(e) => return HttpResponse::InternalServerError().body(format!("Error: {}", e)),
+    };
+
+    match command.update(&mut redis_conn, result, status).await {
+        Ok(_) => HttpResponse::Ok().json(command),
+        Err(e) => HttpResponse::InternalServerError().body(format!("Update failed: {}", e)),
+    }
 }
