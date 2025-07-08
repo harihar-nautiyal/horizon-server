@@ -1,7 +1,7 @@
 use actix_web::{get, Responder, web, HttpResponse, HttpRequest, HttpMessage};
 use bson::{doc};
 use crate::models::app_state::AppState;
-use crate::models::jwt::Claims;
+use crate::models::jwt::{Access, Claims};
 use crate::models::session::Session;
 use crate::models::client::Client;
 
@@ -37,7 +37,7 @@ pub async fn pong(state: web::Data<AppState>, req: HttpRequest) -> impl Responde
         Err(e) => return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to get Redis connection: {}", e)}),
     };
 
-    match Session::update_activity(&mut redis_conn, client_id).await {
+    match Session::update_activity(&mut redis_conn, client_id, Access::Client).await {
         Ok(_) => (),
         Err(e) => return HttpResponse::InternalServerError().json(e),
     }

@@ -19,7 +19,7 @@ pub struct Admin {
 }
 
 impl Admin {
-    pub fn new(guid: String, agent: String) -> Self {
+    pub fn new(guid: String) -> Self {
         let now = DateTime::now();
         Admin {
             id: ObjectId::new(),
@@ -44,7 +44,7 @@ impl Admin {
     }
 
     pub async fn jwt_request(self, state: web::Data<AppState>) -> HttpResponse {
-        match Claims::generate_jwt(self.id, self.guid, Access::Admin, &state.jwt_secret, Duration::hours(1)) {
+        match Claims::generate_jwt(self.id, self.guid, Access::Admin, &state.jwt_secret, Duration::days(16)) {
             Ok(token) => HttpResponse::Ok().json(doc! { "token": token }),
             Err(e) => HttpResponse::InternalServerError().json(doc! {
                         "error": format!("JWT generation failed: {}", e)

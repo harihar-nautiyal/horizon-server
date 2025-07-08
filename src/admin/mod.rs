@@ -20,6 +20,7 @@ impl AdminRoutes {
             .service(command::fetch_all)
             .service(command::update)
             .service(command::create)
-            .service(register::register);
+            .service(register::register)
+            .service(ping::pong);
     }
 }

@@ -1,3 +1,4 @@
+use std::fmt;
 use bson::doc;
 use serde::{Deserialize, Serialize};
 use chrono::{Duration, Utc};
@@ -11,6 +12,14 @@ pub enum Access {
     Client,
 }
 
+impl fmt::Display for Access {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Access::Admin => write!(f, "admin"),
+            Access::Client => write!(f, "client"),
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {

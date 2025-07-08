@@ -10,6 +10,7 @@
       <option name="customHeaders">
         <set>
           <option value="X-Server-Key" />
+          <option value="X-Admin-Key" />
         </set>
       </option>
     </inspection_tool>

@@ -4,6 +4,7 @@ use chrono::Utc;
 use bb8_redis::{bb8::PooledConnection, RedisConnectionManager};
 use bson::doc;
 use bson::oid::ObjectId;
+use crate::models::jwt::Access;
 
 const STATUS_TTL: i64 = 15;
 
@@ -21,11 +22,13 @@ impl Session {
     pub async fn update_activity(
         redis:  &mut PooledConnection<'_, RedisConnectionManager>,
         client_id: &ObjectId,
+        access: Access
     ) -> Result<(), String> {
 
-        let status_key = format!("client:{}:status", client_id);
-        let sessions_key = format!("client:{}:sessions", client_id);
-        let last_ping_key = format!("client:{}:lastPing", client_id);
+        let access_str = access.to_string();
+        let status_key = format!("{}:{}:status", access_str, client_id);
+        let sessions_key = format!("{}:{}:sessions", access_str, client_id);
+        let last_ping_key = format!("{}:{}:lastPing",access_str, client_id);
 
         let now = Utc::now();
         let now_ms = now.timestamp_millis();

@@ -1,0 +1,8 @@
+POST http://localhost:5487/admin/register
+X-Server-Key: jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf9y
+X-Admin-Key: jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf78
+Content-Type: application/json
+
+{
+"guid": "testadmin123"
+}

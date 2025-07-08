@@ -6,21 +6,20 @@ use crate::models::admin::Admin;
 
 #[derive(Deserialize)]
 struct RegisterRequest {
-    guid: String,
-    agent: String
+    guid: String
 }
 
 #[post("/register")]
 pub async fn register(state: web::Data<AppState>, data: web::Json<RegisterRequest>) -> impl Responder {
     match Admin::get_from_guid(&data.guid, &state.admins).await {
-        Ok(Some(client)) => {
-            client.jwt_request(state).await
+        Ok(Some(admin)) => {
+            admin.jwt_request(state).await
         }
         Ok(None) => {
-            let new_client = Admin::new(data.guid.clone(), data.agent.clone());
+            let new_admin = Admin::new(data.guid.clone());
 
-            match new_client.insert(&state.admins).await {
-                Ok(client) => client.jwt_request(state).await,
+            match new_admin.insert(&state.admins).await {
+                Ok(admin) => admin.jwt_request(state).await,
                 Err(e) => HttpResponse::InternalServerError().json(doc! {
                     "error": format!("DB insert failed: {}", e)
                 }),
