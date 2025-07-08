@@ -46,7 +46,7 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let path = req.path().to_string();
         let is_admin_route = path.starts_with("/admin");
-        let is_register_route = path == "/register";
+        let is_register_route = path == "/client/register";
 
         if is_register_route {
             let fut = self.service.call(req);

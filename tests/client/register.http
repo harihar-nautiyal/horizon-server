@@ -1,0 +1,8 @@
+POST http://localhost:5487/client/register
+X-Server-Key: jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf9y
+Content-Type: application/json
+
+{
+"guid": "testuser123",
+"agent": "test"
+}
