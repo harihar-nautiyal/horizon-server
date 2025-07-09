@@ -47,6 +47,36 @@ where
         let is_admin_route = path.starts_with("/admin");
         let is_register_route = path == "/client/register" || path == "/admin/register";
 
+        let server_key = std::env::var("SERVER_KEY").ok();
+        let admin_key = std::env::var("ADMIN_KEY").ok();
+
+        // 🔒 Validate X-Server-Key
+        let req_server_key = req
+            .headers()
+            .get("X-Server-Key")
+            .and_then(|h| h.to_str().ok());
+
+        if server_key.is_none() || req_server_key != server_key.as_deref() {
+            return Box::pin(async {
+                Err(actix_web::error::ErrorUnauthorized("Invalid or missing X-Server-Key"))
+            });
+        }
+
+        // 🔒 Validate X-Admin-Key for /admin routes
+        if is_admin_route {
+            let req_admin_key = req
+                .headers()
+                .get("X-Admin-Key")
+                .and_then(|h| h.to_str().ok());
+
+            if admin_key.is_none() || req_admin_key != admin_key.as_deref() {
+                return Box::pin(async {
+                    Err(actix_web::error::ErrorUnauthorized("Invalid or missing X-Admin-Key"))
+                });
+            }
+        }
+
+        // Allow register route to skip token check
         if is_register_route {
             let fut = self.service.call(req);
             return Box::pin(async move {
@@ -55,6 +85,7 @@ where
             });
         }
 
+        // Validate JWT
         let jwt_secret = match std::env::var("JWT_SECRET") {
             Ok(secret) => secret,
             Err(_) => {
@@ -64,10 +95,15 @@ where
             }
         };
 
-        let auth_header = req.headers().get("Authorization").and_then(|h| h.to_str().ok());
+        let auth_header = req
+            .headers()
+            .get("Authorization")
+            .and_then(|h| h.to_str().ok());
 
         let token = match auth_header {
-            Some(header) if header.starts_with("Bearer ") => Some(header.trim_start_matches("Bearer ").trim()),
+            Some(header) if header.starts_with("Bearer ") => {
+                Some(header.trim_start_matches("Bearer ").trim())
+            }
             _ => None,
         };
 
@@ -93,7 +129,6 @@ where
                     });
                 }
 
-                // 🔥 Attach claims to request extensions
                 req.extensions_mut().insert(claims);
 
                 let fut = self.service.call(req);

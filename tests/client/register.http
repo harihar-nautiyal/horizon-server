@@ -1,6 +1,6 @@
 POST http://localhost:5487/client/register
-X-Server-Key: jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf9y
 Content-Type: application/json
+X-Server-Key: jprLK8zviZKybwHjCWZ93QMqMmuomyXrpvfbS3US20FMqf9ys
 
 {
 "guid": "testuser123",
