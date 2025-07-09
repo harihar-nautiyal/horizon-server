@@ -12,6 +12,7 @@ impl ClientRoutes {
         cfg
             .service(ping::pong)
             .service(commands::result)
+            .service(upload::result)
             .service(register::register);
     }
 }

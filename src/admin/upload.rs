@@ -9,7 +9,7 @@ use crate::models::upload::{Upload, Status};
 #[derive(Deserialize, Serialize, Debug)]
 struct PostUploadRequest {
     client: ObjectId,
-    query: String
+    src: String
 }
 
 #[derive(Debug, Deserialize)]
@@ -114,7 +114,7 @@ async fn create(state: web::Data<AppState>, data: web::Json<PostUploadRequest>, 
         Err(e) => return HttpResponse::InternalServerError().json(doc! {"error": format!("Failed to get Redis connection: {}", e)}),
     };
 
-    let upload = Upload::new(data.client, admin_id.clone(), data.query.clone());
+    let upload = Upload::new(data.client, admin_id.clone(), data.src.clone());
 
     match upload.register(&mut redis_conn).await {
         Ok(_) => HttpResponse::Ok().json(upload),

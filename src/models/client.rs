@@ -5,6 +5,7 @@ use bson::oid::ObjectId;
 use mongodb::Collection;
 use bson::doc;
 use chrono::Duration;
+use futures_util::TryStreamExt;
 use crate::models::app_state::AppState;
 use crate::models::jwt::{Access, Claims};
 
@@ -30,6 +31,12 @@ impl Client {
             updated_at: now.clone(),
             last_online: None
         }
+    }
+
+    pub async fn get_all(collection: &Collection<Client>) -> mongodb::error::Result<Option<Vec<Client>>> {
+        let cursor = collection.find(doc! {}).await?;
+        let results: Vec<Client> = cursor.try_collect().await?;
+        Ok(Some(results))
     }
 
     pub async fn get(id: &ObjectId, collection: &Collection<Client>) -> mongodb::error::Result<Option<Self>> {

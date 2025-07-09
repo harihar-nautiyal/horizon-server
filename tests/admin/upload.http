@@ -25,8 +25,8 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "client": "686d0a550faa2098b958beae",
-  "query": "execute_task_123"
+  "client": "686d4d8799668584c3356f45",
+  "src": "/home/harihar/Pictures/192.png"
 }
 
 ###
